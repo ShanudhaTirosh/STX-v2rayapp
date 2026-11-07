@@ -1,0 +1,99 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using ServiceLib.Common;
+using SQLite;
+
+namespace ServiceLib.Helper;
+
+public sealed class SQLiteHelper
+{
+	private static readonly Lazy<SQLiteHelper> _instance = new Lazy<SQLiteHelper>(() => new SQLiteHelper());
+
+	private readonly string _connstr;
+
+	private SQLiteConnection _db;
+
+	private SQLiteAsyncConnection _dbAsync;
+
+	private readonly string _configDB = "guiNDB.db";
+
+	public static SQLiteHelper Instance => _instance.Value;
+
+	public SQLiteHelper()
+	{
+		SQLitePCL.Batteries_V2.Init();
+		_connstr = Utils.GetConfigPath(_configDB);
+		_db = new SQLiteConnection(_connstr, storeDateTimeAsTicks: false);
+		_dbAsync = new SQLiteAsyncConnection(_connstr, storeDateTimeAsTicks: false);
+	}
+
+	public CreateTableResult CreateTable<T>()
+	{
+		return _db.CreateTable<T>();
+	}
+
+	public async Task<int> InsertAllAsync(IEnumerable models)
+	{
+		return await _dbAsync.InsertAllAsync(models).ConfigureAwait(continueOnCapturedContext: false);
+	}
+
+	public async Task<int> InsertAsync(object model)
+	{
+		return await _dbAsync.InsertAsync(model);
+	}
+
+	public async Task<int> ReplaceAsync(object model)
+	{
+		return await _dbAsync.InsertOrReplaceAsync(model);
+	}
+
+	public async Task<int> UpdateAsync(object model)
+	{
+		return await _dbAsync.UpdateAsync(model);
+	}
+
+	public async Task<int> UpdateAllAsync(IEnumerable models)
+	{
+		return await _dbAsync.UpdateAllAsync(models).ConfigureAwait(continueOnCapturedContext: false);
+	}
+
+	public async Task<int> DeleteAsync(object model)
+	{
+		return await _dbAsync.DeleteAsync(model);
+	}
+
+	public async Task<int> DeleteAllAsync<T>()
+	{
+		return await _dbAsync.DeleteAllAsync<T>();
+	}
+
+	public async Task<int> ExecuteAsync(string sql)
+	{
+		return await _dbAsync.ExecuteAsync(sql);
+	}
+
+	public async Task<List<T>> QueryAsync<T>(string sql) where T : new()
+	{
+		return await _dbAsync.QueryAsync<T>(sql, Array.Empty<object>());
+	}
+
+	public AsyncTableQuery<T> TableAsync<T>() where T : new()
+	{
+		return _dbAsync.Table<T>();
+	}
+
+	public async Task DisposeDbConnectionAsync()
+	{
+		await Task.Factory.StartNew(() =>
+		{
+			_db?.Close();
+			_db?.Dispose();
+			_db = null;
+			_dbAsync?.GetConnection()?.Close();
+			_dbAsync?.GetConnection()?.Dispose();
+			_dbAsync = null;
+		});
+	}
+}

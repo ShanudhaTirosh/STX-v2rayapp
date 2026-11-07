@@ -1,0 +1,42 @@
+[
+  {
+    "ip_cidr": [
+      "127.0.0.0/8",
+      "::1/128"
+    ],
+    "outbound": "direct"
+  },
+  {
+    "domain": [
+      "localhost"
+    ],
+    "domain_suffix": [
+      ".local",
+      ".localhost",
+      ".internal"
+    ],
+    "outbound": "direct"
+  },
+  {
+    "ip_is_private": true,
+    "outbound": "direct"
+  },
+  {
+    "network": "udp",
+    "port": [
+      135,
+      137,
+      138,
+      139,
+      5353
+    ],
+    "action": "reject"
+  },
+  {
+    "ip_cidr": [
+      "224.0.0.0/3",
+      "ff00::/8"
+    ],
+    "action": "reject"
+  }
+]

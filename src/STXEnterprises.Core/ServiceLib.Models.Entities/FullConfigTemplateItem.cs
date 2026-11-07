@@ -1,0 +1,26 @@
+using System;
+using ServiceLib.Enums;
+using SQLite;
+
+namespace ServiceLib.Models.Entities;
+
+[Serializable]
+public class FullConfigTemplateItem
+{
+	[PrimaryKey]
+	public string Id { get; set; }
+
+	public string Remarks { get; set; }
+
+	public bool Enabled { get; set; }
+
+	public ECoreType CoreType { get; set; }
+
+	public string? Config { get; set; }
+
+	public string? TunConfig { get; set; }
+
+	public bool? AddProxyOnly { get; set; } = false;
+
+	public string? ProxyDetour { get; set; }
+}

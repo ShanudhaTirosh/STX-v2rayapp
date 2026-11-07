@@ -1,0 +1,12 @@
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\src\STXEnterprises.Core\bin\Release\net8.0-windows7.0\STXEnterprises.Core.deps.json
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\src\STXEnterprises.Core\bin\Release\net8.0-windows7.0\STXEnterprises.Core.dll
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\src\STXEnterprises.Core\bin\Release\net8.0-windows7.0\STXEnterprises.Core.pdb
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\src\STXEnterprises.Core\obj\Release\net8.0-windows7.0\STXEnterprises.Core.csproj.AssemblyReference.cache
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\src\STXEnterprises.Core\obj\Release\net8.0-windows7.0\ServiceLib.ServiceLib.Resx.ResUI.resources
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\src\STXEnterprises.Core\obj\Release\net8.0-windows7.0\STXEnterprises.Core.csproj.GenerateResource.cache
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\src\STXEnterprises.Core\obj\Release\net8.0-windows7.0\STXEnterprises.Core.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\src\STXEnterprises.Core\obj\Release\net8.0-windows7.0\STXEnterprises.Core.csproj.CoreCompileInputs.cache
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\src\STXEnterprises.Core\obj\Release\net8.0-windows7.0\STXEnterprises.Core.dll
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\src\STXEnterprises.Core\obj\Release\net8.0-windows7.0\refint\STXEnterprises.Core.dll
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\src\STXEnterprises.Core\obj\Release\net8.0-windows7.0\STXEnterprises.Core.pdb
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\src\STXEnterprises.Core\obj\Release\net8.0-windows7.0\ref\STXEnterprises.Core.dll

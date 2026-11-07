@@ -1,0 +1,22 @@
+[
+  {
+    "ip": [
+      "127.0.0.0/8",
+      "::1/128",
+      "geoip:private"
+    ],
+    "outboundTag": "direct"
+  },
+  {
+    "network": "udp",
+    "port": "135,137-139,5353",
+    "outboundTag": "block"
+  },
+  {
+    "ip": [
+      "224.0.0.0/3",
+      "ff00::/8"
+    ],
+    "outboundTag": "block"
+  }
+]

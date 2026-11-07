@@ -1,0 +1,14 @@
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\bin\Debug\net8.0-windows7.0\GenLogo.exe
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\bin\Debug\net8.0-windows7.0\GenLogo.deps.json
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\bin\Debug\net8.0-windows7.0\GenLogo.runtimeconfig.json
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\bin\Debug\net8.0-windows7.0\GenLogo.dll
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\bin\Debug\net8.0-windows7.0\GenLogo.pdb
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\obj\Debug\net8.0-windows7.0\GenLogo.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\obj\Debug\net8.0-windows7.0\GenLogo.AssemblyInfoInputs.cache
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\obj\Debug\net8.0-windows7.0\GenLogo.AssemblyInfo.cs
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\obj\Debug\net8.0-windows7.0\GenLogo.csproj.CoreCompileInputs.cache
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\obj\Debug\net8.0-windows7.0\GenLogo.dll
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\obj\Debug\net8.0-windows7.0\refint\GenLogo.dll
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\obj\Debug\net8.0-windows7.0\GenLogo.pdb
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\obj\Debug\net8.0-windows7.0\GenLogo.genruntimeconfig.cache
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\scratch\GenLogo\obj\Debug\net8.0-windows7.0\ref\GenLogo.dll

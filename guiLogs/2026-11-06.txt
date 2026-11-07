@@ -1,0 +1,108 @@
+2026-11-06 14:29:57.2501-INFO STX Enterprises start up | STX Enterprises - V2.0.0 - X64 | C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\ | C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\STXEnterprises.exe | Microsoft Windows NT 10.0.26300.0
+2026-11-06 14:29:57.2890-INFO MigrateProfileExtraGroup: No items to migrate.
+2026-11-06 14:29:57.3918-INFO Seeded the built-in routing rules for a new profile.
+2026-11-06 14:30:21.0775-INFO connect: 🔰 ShiftLK 443-Shanudha-Personal | tun=True | legacyProtect=True
+2026-11-06 14:30:21.4050-INFO address: pinned slk.cmta.org.lk to 172.255.209.140
+2026-11-06 14:30:22.1187-INFO uplink: using Wi-Fi, the only way out, which reached the server in 508ms
+2026-11-06 14:30:22.1360-INFO connect: preCore=sing_box mainCore=Xray mainTun=False
+2026-11-06 14:30:22.2017-INFO core: [VLESS] 🔰 ShiftLK 443-Shanudha-Personal(slk***lk:443)
+2026-11-06 14:30:22.2017-INFO core: STX Enterprises - V2.0.0 - X64 | C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\ | C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\STXEnterprises.exe | Microsoft Windows NT 10.0.26300.0
+2026-11-06 14:30:22.2017-INFO core: Starting service (2026/11/06 14:30:22)...
+2026-11-06 14:30:22.6910-INFO core: Xray 26.1.23 (Xray, Penetrates Everything.) 0a42dba (go1.25.6 windows/amd64)
+2026-11-06 14:30:22.6910-INFO core: A unified platform for anti-censorship.
+2026-11-06 14:30:22.7010-INFO core: 2026/11/06 14:30:22.700058 [Info] infra/conf/serial: Reading config: &{Name:config.json Format:json}
+2026-11-06 14:30:22.8110-INFO sing-box: dropped 1 remote rule-set(s) and 2 rule(s) that needed them; routing is Xray's job and the tunnel must start offline.
+2026-11-06 14:30:22.9595-INFO core: 2026/11/06 14:30:22.959210 [Warning] common/errors: This feature allowInsecure is deprecated, will be removed soon and being migrated to pinnedPeerCertSha256. Please update your config(s) according to release note and documentation before removal.
+2026-11-06 14:30:22.9707-INFO core: [VLESS] 🔰 ShiftLK 443-Shanudha-Personal(slk***lk:443)
+2026-11-06 14:30:22.9836-INFO connect: after load — xray=True singBox=True
+2026-11-06 14:30:23.4901-INFO connect: socks 10808 answering=True
+2026-11-06 14:30:23.5033-INFO core: 2026/11/06 14:30:23.502930 from tcp:127.0.0.1:57101 accepted tcp:one.one.one.one:443 [socks -> proxy]
+2026-11-06 14:30:23.5033-INFO core: 2026/11/06 14:30:23.502930 from tcp:127.0.0.1:57102 accepted tcp:www.cloudflare.com:443 [socks -> proxy]
+2026-11-06 14:30:23.5033-INFO core: 2026/11/06 14:30:23.503983 from tcp:127.0.0.1:57103 accepted tcp:www.google.com:443 [socks -> proxy]
+2026-11-06 14:30:24.0017-INFO core: 2026/11/06 14:30:24.001265 from 127.0.0.1:51555 accepted tcp:127.0.0.1:10812 [api -> api]
+2026-11-06 14:30:24.3285-INFO connect: names resolving through the proxy=True
+2026-11-06 14:30:24.7304-INFO core: 2026/11/06 14:30:24.730275 from tcp:127.0.0.1:51558 accepted tcp:104.16.249.249:443 [socks -> proxy]
+2026-11-06 14:30:24.7304-INFO core: 2026/11/06 14:30:24.730815 from tcp:127.0.0.1:51559 accepted tcp:172.255.209.140:443 [socks -> proxy]
+2026-11-06 14:30:25.2490-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 14:30:27.1408-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 14:30:28.3051-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 14:30:50.8695-DEBUG task,A Task's exception(s) were not observed either by Waiting on the Task or accessing its Exception property. As a result, the unobserved exception was rethrown by the finalizer thread. (Unable to read data from the transport connection: An existing connection was forcibly closed by the remote host..)
+2026-11-06 14:30:50.8695-DEBUG 
+2026-11-06 14:30:50.8705-ERROR System.IO.IOException: Unable to read data from the transport connection: An existing connection was forcibly closed by the remote host..
+2026-11-06 14:32:42.6990-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 14:33:03.4268-INFO watchdog: the tunnel answered again
+2026-11-06 14:33:50.7988-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 14:34:11.4654-INFO watchdog: the tunnel answered again
+2026-11-06 14:39:33.3595-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 14:39:55.1605-INFO watchdog: the tunnel answered again
+2026-11-06 14:43:50.2513-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 14:44:11.0264-INFO watchdog: the tunnel answered again
+2026-11-06 14:53:33.9081-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 14:53:54.6863-INFO watchdog: the tunnel answered again
+2026-11-06 15:09:07.3597-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 15:09:07.3597-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 15:09:47.7400-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 15:09:47.7441-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 15:09:57.3115-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 15:35:22.1361-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 15:35:46.1395-INFO watchdog: the tunnel did not answer (2/3)
+2026-11-06 15:36:06.9369-INFO watchdog: the tunnel answered again
+2026-11-06 15:37:15.1213-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 15:37:35.8171-INFO watchdog: the tunnel answered again
+2026-11-06 15:38:22.4857-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 15:38:46.4853-INFO watchdog: the tunnel did not answer (2/3)
+2026-11-06 15:39:10.4858-INFO watchdog: the tunnel did not answer (3/3)
+2026-11-06 15:39:10.4858-INFO watchdog: rebuilding the tunnel
+2026-11-06 15:39:11.4543-INFO connect: 🔰 ShiftLK 443-Shanudha-Personal | tun=True | legacyProtect=True
+2026-11-06 15:39:13.1023-INFO uplink: using Wi-Fi, the only way out, which reached the server in 595ms
+2026-11-06 15:39:13.1259-INFO connect: preCore=sing_box mainCore=Xray mainTun=False
+2026-11-06 15:39:13.1793-INFO core: [VLESS] 🔰 ShiftLK 443-Shanudha-Personal(slk***lk:443)
+2026-11-06 15:39:13.1811-INFO core: STX Enterprises - V2.0.0 - X64 | C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\ | C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\STXEnterprises.exe | Microsoft Windows NT 10.0.26300.0
+2026-11-06 15:39:13.1811-INFO core: Starting service (2026/11/06 15:39:13)...
+2026-11-06 15:39:13.9112-INFO core: Xray 26.1.23 (Xray, Penetrates Everything.) 0a42dba (go1.25.6 windows/amd64)
+2026-11-06 15:39:13.9112-INFO core: A unified platform for anti-censorship.
+2026-11-06 15:39:13.9162-INFO core: 2026/11/06 15:39:13.914993 [Info] infra/conf/serial: Reading config: &{Name:config.json Format:json}
+2026-11-06 15:39:13.9714-INFO sing-box: dropped 1 remote rule-set(s) and 2 rule(s) that needed them; routing is Xray's job and the tunnel must start offline.
+2026-11-06 15:39:14.0878-INFO core: [VLESS] 🔰 ShiftLK 443-Shanudha-Personal(slk***lk:443)
+2026-11-06 15:39:14.1066-INFO connect: after load — xray=True singBox=True
+2026-11-06 15:39:14.1385-INFO core: 2026/11/06 15:39:14.138107 [Warning] common/errors: This feature allowInsecure is deprecated, will be removed soon and being migrated to pinnedPeerCertSha256. Please update your config(s) according to release note and documentation before removal.
+2026-11-06 15:39:14.4939-INFO core: 2026/11/06 15:39:14.493914 from 127.0.0.1:49671 accepted tcp:127.0.0.1:10812 [api -> api]
+2026-11-06 15:39:14.6091-INFO connect: socks 10808 answering=True
+2026-11-06 15:39:14.6091-INFO core: 2026/11/06 15:39:14.615747 from tcp:127.0.0.1:62478 accepted tcp:one.one.one.one:443 [socks -> proxy]
+2026-11-06 15:39:14.6091-INFO core: 2026/11/06 15:39:14.615747 from tcp:127.0.0.1:62479 accepted tcp:www.cloudflare.com:443 [socks -> proxy]
+2026-11-06 15:39:14.6091-INFO core: 2026/11/06 15:39:14.615747 from tcp:127.0.0.1:62480 accepted tcp:www.google.com:443 [socks -> proxy]
+2026-11-06 15:39:15.5178-INFO connect: names resolving through the proxy=True
+2026-11-06 15:39:15.7061-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 15:39:15.7512-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 15:39:15.7592-INFO core: 2026/11/06 15:39:15.759093 from tcp:127.0.0.1:61022 accepted tcp:one.one.one.one:443 [socks -> proxy]
+2026-11-06 15:39:15.7592-INFO core: 2026/11/06 15:39:15.760208 from tcp:127.0.0.1:61023 accepted tcp:www.cloudflare.com:443 [socks -> proxy]
+2026-11-06 15:39:15.7592-INFO core: 2026/11/06 15:39:15.764257 from tcp:127.0.0.1:61024 accepted tcp:www.google.com:443 [socks -> proxy]
+2026-11-06 15:39:16.2691-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 15:39:16.7432-INFO core: 2026/11/06 15:39:16.743012 from tcp:127.0.0.1:61026 accepted tcp:172.217.112.4:443 [socks -> proxy]
+2026-11-06 15:39:17.0336-INFO core: 2026/11/06 15:39:17.033496 from tcp:127.0.0.1:61035 accepted tcp:104.16.249.249:443 [socks -> proxy]
+2026-11-06 15:39:17.1897-INFO core: 2026/11/06 15:39:17.189203 from tcp:127.0.0.1:61039 accepted tcp:162.159.197.3:443 [socks -> proxy]
+2026-11-06 15:39:17.4406-INFO core: 2026/11/06 15:39:17.440452 from udp:127.0.0.1:59141 accepted udp:104.29.142.90:19308 [socks -> proxy]
+2026-11-06 15:39:17.4589-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 15:39:17.8695-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 15:39:19.4968-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 15:39:20.8054-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 15:39:20.8054-INFO watchdog: traffic is flowing again
+2026-11-06 15:40:41.2020-DEBUG task,A Task's exception(s) were not observed either by Waiting on the Task or accessing its Exception property. As a result, the unobserved exception was rethrown by the finalizer thread. (Unable to read data from the transport connection: An existing connection was forcibly closed by the remote host..)
+2026-11-06 15:40:41.2020-DEBUG 
+2026-11-06 15:40:41.2020-ERROR System.IO.IOException: Unable to read data from the transport connection: An existing connection was forcibly closed by the remote host..
+2026-11-06 15:43:15.3554-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 15:43:38.1311-INFO watchdog: the tunnel answered again
+2026-11-06 15:52:54.2756-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 15:53:15.8278-INFO watchdog: the tunnel answered again
+2026-11-06 15:54:00.7419-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 15:54:23.8397-INFO watchdog: the tunnel answered again
+2026-11-06 15:55:08.6040-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 15:55:30.1305-INFO watchdog: the tunnel answered again
+2026-11-06 15:59:06.3661-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 15:59:29.3048-INFO watchdog: the tunnel answered again
+2026-11-06 16:00:55.7622-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 16:01:18.4704-INFO watchdog: the tunnel answered again
+2026-11-06 16:01:42.4734-INFO watchdog: the tunnel did not answer (1/3)
+2026-11-06 16:01:51.0213-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 16:01:51.0213-INFO watchdog: the machine's addresses changed; re-checking the tunnel
+2026-11-06 16:01:59.0367-INFO watchdog: the tunnel did not answer (2/3)

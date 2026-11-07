@@ -1,0 +1,6 @@
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\dist\STXEnterprises.pdb
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\dist\STXEnterprises.Core.pdb
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\dist\Microsoft.Web.WebView2.Core.xml
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\dist\Microsoft.Web.WebView2.WinForms.xml
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\dist\Microsoft.Web.WebView2.Wpf.xml
+C:\Users\tiros\OneDrive\Desktop\New folder (3)\PXN-Shield-VPN-Portable\dist\STXEnterprises.exe
