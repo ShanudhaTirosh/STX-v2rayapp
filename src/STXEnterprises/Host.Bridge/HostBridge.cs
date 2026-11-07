@@ -42,6 +42,7 @@ public sealed class HostBridge
 	{
 		HttpClient httpClient = new HttpClient();
 		httpClient.Timeout = TimeSpan.FromSeconds(30L);
+		httpClient.MaxResponseContentBufferSize = 8 * 1024 * 1024;
 		string text = typeof(HostBridge).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 		httpClient.DefaultRequestHeaders.UserAgent.ParseAdd("STXEnterprises/" + text);
 		return httpClient;
@@ -67,30 +68,26 @@ public sealed class HostBridge
 
 	private async void OnMessage(string message)
 	{
-		JsonNode jsonNode;
+		// Everything that reads the message is inside the try: this is an async void handler, so any exception
+		// escaping it (e.g. a page sending "id" as a string) would take the whole application down.
+		int id = 0;
+		string? method = null;
 		try
 		{
-			jsonNode = JsonNode.Parse(message);
-		}
-		catch
-		{
-			return;
-		}
-		int id = (jsonNode?["id"]?.GetValue<int>()).GetValueOrDefault();
-		string method = jsonNode?["method"]?.GetValue<string>();
-		JsonNode p = jsonNode?["params"];
-		if (method == null)
-		{
-			return;
-		}
-		try
-		{
+			JsonNode? jsonNode = JsonNode.Parse(message);
+			id = (jsonNode?["id"]?.GetValue<int>()).GetValueOrDefault();
+			method = jsonNode?["method"]?.GetValue<string>();
+			JsonNode? p = jsonNode?["params"];
+			if (method == null)
+			{
+				return;
+			}
 			int id2 = id;
 			Reply(id2, ok: true, await Dispatch(method, p), null);
 		}
 		catch (Exception ex)
 		{
-			Logging.SaveLog("bridge " + method, ex);
+			Logging.SaveLog("bridge " + (method ?? "(unreadable message)"), ex);
 			Reply(id, ok: false, null, Friendly(ex));
 		}
 	}
@@ -264,6 +261,7 @@ public sealed class HostBridge
 			AutoConnect = _settings.AutoConnect,
 			MinimiseToTray = _settings.MinimiseToTray,
 			StartMinimised = _settings.StartMinimised,
+			PinServerCertificates = _settings.PinServerCertificates,
 			Language = _settings.Language,
 			Theme = _settings.Theme,
 			LastConfigId = _settings.LastConfigId,
@@ -308,6 +306,12 @@ public sealed class HostBridge
 		{
 			_settings.Theme = jsonNode6.GetValue<string>();
 		}
+		JsonNode jsonNode9 = p?["pinServerCertificates"];
+		if (jsonNode9 != null)
+		{
+			_settings.PinServerCertificates = jsonNode9.GetValue<bool>();
+			StxCertPin.Set(_settings.PinServerCertificates);
+		}
 		JsonNode jsonNode7 = p?["lastConfigId"];
 		if (jsonNode7 != null)
 		{
@@ -329,14 +333,17 @@ public sealed class HostBridge
 
 	private async Task<object> HostFetchAsync(JsonNode? p)
 	{
-		string requestUri = Str(p, "url");
-		string method = p?["method"]?.GetValue<string>() ?? "GET";
+		Uri requestUri = BridgeFetchPolicy.ValidateUrl(Str(p, "url"));
+		string method = BridgeFetchPolicy.ValidateMethod(p?["method"]?.GetValue<string>());
 		using HttpRequestMessage request = new HttpRequestMessage(new HttpMethod(method), requestUri);
 		if (p?["headers"] is JsonObject jsonObject)
 		{
 			foreach (var (name, jsonNode2) in jsonObject)
 			{
-				request.Headers.TryAddWithoutValidation(name, jsonNode2?.GetValue<string>());
+				if (BridgeFetchPolicy.HeaderAllowed(name))
+				{
+					request.Headers.TryAddWithoutValidation(name, jsonNode2?.GetValue<string>());
+				}
 			}
 		}
 		string text2 = p?["body"]?.GetValue<string>();

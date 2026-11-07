@@ -1,1 +1,20 @@
+# build output
+bin/Release/
+src/**/bin/
+src/**/obj/
+scratch/**/bin/
+scratch/**/obj/
 dist/
+*.user
+.vs/
+# runtime state - contains account IDs, server addresses and logs. Never commit or ship these.
+guiConfigs/
+guiLogs/
+guiTemps/
+binConfigs/
+bin/cache.db
+# local experiments
+scratch/
+# crash/diagnostics output
+*.dmp
+STX-diagnostics-*.zip

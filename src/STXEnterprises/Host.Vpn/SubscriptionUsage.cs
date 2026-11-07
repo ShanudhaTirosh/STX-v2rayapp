@@ -11,10 +11,9 @@ namespace STXEnterprises.Host.Vpn;
 
 public static class SubscriptionUsage
 {
-	private static readonly HttpClient Http = new HttpClient(new HttpClientHandler
-	{
-		ServerCertificateCustomValidationCallback = (HttpRequestMessage _, X509Certificate2? _, X509Chain? _, SslPolicyErrors _) => true
-	})
+	// Certificate validation is ON. It used to be switched off here, which let anyone on the network read the
+	// subscription URL (it contains the account token) and forge the usage numbers.
+	private static readonly HttpClient Http = new HttpClient()
 	{
 		Timeout = TimeSpan.FromSeconds(15L)
 	};
@@ -23,6 +22,7 @@ public static class SubscriptionUsage
 	{
 		try
 		{
+			await STXEnterprises.Host.Bridge.BridgeFetchPolicy.EnsurePublicRemoteAsync(url);
 			using HttpRequestMessage request = new HttpRequestMessage(HttpMethod.Get, url);
 			request.Headers.TryAddWithoutValidation("User-Agent", "STXClient");
 			using HttpResponseMessage httpResponseMessage = await Http.SendAsync(request, HttpCompletionOption.ResponseHeadersRead);
@@ -50,7 +50,8 @@ public static class SubscriptionUsage
 		}
 		catch (Exception ex)
 		{
-			Logging.SaveLog("usage header " + url.Substring(0, Math.Min(40, url.Length)) + ": " + ex.Message);
+			string host = Uri.TryCreate(url, UriKind.Absolute, out Uri? u) ? u.Host : "(invalid address)";
+			Logging.SaveLog("usage header for " + host + ": " + ex.Message);
 			return null;
 		}
 	}

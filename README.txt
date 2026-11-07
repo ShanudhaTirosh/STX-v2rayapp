@@ -11,9 +11,16 @@ The first time, Windows may also show a blue "Windows protected your PC" panel.
 That is SmartScreen reacting to an app it has not seen before, not a virus
 warning. Click "More info", then "Run anyway".
 
-Everything the app needs is in this folder, and everything it writes stays in
-this folder - your configs, the database, and the logs. To move it, move the
-folder. To remove it, delete the folder.
+Everything the app needs is in this folder. Your configs, database and logs are
+written here too; the only thing stored elsewhere is the browser-engine cache in
+%LocalAppData%\STX Enterprises. To move the app, move the folder. To remove it,
+quit STX first, then delete the folder (and that cache folder if you like).
+
+If the app is ever killed while connected and your internet seems dead, start STX
+again (it repairs the Windows proxy on launch) or run:  STXEnterprises.exe --reset-proxy
+
+To send logs to support, use the tray icon > Save diagnostics. The file is redacted
+(no account IDs, server links or visited sites) and is never uploaded automatically.
 
 Features & Improvements:
 - High-performance Sing-box TUN engine with mixed gVisor user-space network stack

@@ -121,3 +121,37 @@ dialog, [role="dialog"], .toast {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.35) !important;
 }
+
+/* ---- Accessibility pass (audit) ---- */
+/* Keyboard users need a clearly visible focus indicator on every interactive control. */
+button:focus-visible,
+a:focus-visible,
+[role="button"]:focus-visible,
+[role="tab"]:focus-visible,
+[role="switch"]:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 2px solid #ffffff !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.25) !important;
+}
+/* People who ask Windows to reduce animation get none (spinners keep rotating state via the label, not motion). */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+/* Glass panels stay readable where backdrop blur is unavailable (older WebView2, GPU disabled). */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .card, nav, dialog, [role="dialog"] { background-color: rgba(18, 18, 22, 0.96) !important; }
+}
+/* Windows High Contrast: use system colours rather than our translucent greys. */
+@media (forced-colors: active) {
+  .card, nav, dialog, [role="dialog"] { background: Canvas !important; border: 1px solid CanvasText !important; }
+  button, a, input, select { forced-color-adjust: auto; }
+}

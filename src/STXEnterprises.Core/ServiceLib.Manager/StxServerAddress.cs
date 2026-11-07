@@ -201,7 +201,7 @@ public static class StxServerAddress
 		await _io.WaitAsync();
 		try
 		{
-			await File.WriteAllTextAsync(Utils.GetConfigPath("stx-known-addresses.json"), JsonUtils.Serialize(new Dictionary<string, string>(_pinned)));
+			await AtomicFile.WriteAllTextAsync(Utils.GetConfigPath("stx-known-addresses.json"), JsonUtils.Serialize(new Dictionary<string, string>(_pinned)));
 		}
 		catch (Exception ex)
 		{

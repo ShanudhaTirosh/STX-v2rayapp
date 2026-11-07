@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Compiles the testable (non-WPF) sources directly, so it runs on Windows and on Linux/CI alike:  dotnet run -c Release -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <UseAppHost>false</UseAppHost>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultEmbeddedResourceItems>false</EnableDefaultEmbeddedResourceItems>
+    <NoWarn>CA1416;CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8619;CS8620;CS8625;CS8765;CS8767;CS0168;CS0219;CS1998;CS0649;CS0169;CS0414;CS0162;CS0472;CS8981</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\src\STXEnterprises.Core\**\*.cs" Exclude="..\..\src\STXEnterprises.Core\obj\**;..\..\src\STXEnterprises.Core\bin\**" />
+    <Compile Include="..\..\src\STXEnterprises\Host.Vpn\*.cs" />
+    <Compile Include="..\..\src\STXEnterprises\Host.Bridge\HostBridge.cs;..\..\src\STXEnterprises\Host.Bridge\IHostView.cs;..\..\src\STXEnterprises\Host.Bridge\LoopbackAuth.cs;..\..\src\STXEnterprises\Host.Bridge\BridgeFetchPolicy.cs;..\..\src\STXEnterprises\Host.Bridge\OriginPolicy.cs;..\..\src\STXEnterprises\Host\HostSettings.cs" />
+    <EmbeddedResource Include="..\..\src\STXEnterprises.Core\ServiceLib.Sample.*" LogicalName="%(Filename)%(Extension)" />
+    <EmbeddedResource Include="..\..\src\STXEnterprises.Core\ServiceLib.Resx.ResUI.resx" LogicalName="ServiceLib.Resx.ResUI.resources" />
+    <PackageReference Include="CliWrap" Version="3.10.1" />
+    <PackageReference Include="Downloader" Version="5.5.0" />
+    <PackageReference Include="NLog" Version="6.1.3" />
+    <PackageReference Include="sqlite-net-e" Version="1.11.0" />
+    <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="3.0.5" />
+    <PackageReference Include="TaskScheduler" Version="2.12.2" />
+    <PackageReference Include="YamlDotNet" Version="17.1.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.7" />
+  </ItemGroup>
+</Project>

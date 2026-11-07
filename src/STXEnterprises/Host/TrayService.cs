@@ -22,7 +22,7 @@ public sealed class TrayService : IDisposable
 
 	private TunnelState _state;
 
-	public TrayService(Action show, Func<Task> connect, Func<Task> disconnect, Action quit)
+	public TrayService(Action show, Func<Task> connect, Func<Task> disconnect, Action quit, Action exportDiagnostics)
 	{
 		TrayService trayService = this;
 		_connect = connect;
@@ -45,6 +45,10 @@ public sealed class TrayService : IDisposable
 				(ToolStripItem)new ToolStripMenuItem("Open STX Enterprises", null, (object? _, EventArgs _) =>
 				{
 					show();
+				}),
+				(ToolStripItem)new ToolStripMenuItem("Save diagnostics…", null, (object? _, EventArgs _) =>
+				{
+					exportDiagnostics();
 				}),
 				(ToolStripItem)new ToolStripSeparator(),
 				(ToolStripItem)new ToolStripMenuItem("Quit", null, (object? _, EventArgs _) =>
@@ -101,7 +105,7 @@ public sealed class TrayService : IDisposable
 		_statusLine.Text = text2;
 		_toggle.Text = ((status.State == TunnelState.Connected) ? "Disconnect" : "Connect");
 		_toggle.Enabled = status.State != TunnelState.Connecting;
-		string text3 = "STX Client — " + text2;
+		string text3 = "STX Enterprises — " + text2;
 		_icon.Text = ((text3.Length > 63) ? (text3.Substring(0, 60) + "…") : text3);
 	}
 

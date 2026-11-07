@@ -1131,13 +1131,15 @@ public class CoreConfigV2rayService
 			{
 				DateTime now = DateTime.Now;
 				_coreConfig.log.loglevel = _config.CoreBasicItem.Loglevel;
-				_coreConfig.log.access = null;
+				// "none" disables the access log. Leaving it unset makes Xray print every connection
+				// (the destination host of each request) to stdout, which the app then wrote to disk.
+				_coreConfig.log.access = "none";
 				_coreConfig.log.error = Utils.GetLogPath($"Verror_{now:yyyy-MM-dd}.txt");
 			}
 			else
 			{
 				_coreConfig.log.loglevel = _config.CoreBasicItem.Loglevel;
-				_coreConfig.log.access = null;
+				_coreConfig.log.access = "none";
 				_coreConfig.log.error = null;
 			}
 		}

@@ -16,6 +16,8 @@ public partial class App : Application
 
 	private static bool _windowUp;
 
+	private static string AppVersion => typeof(App).Assembly.GetName().Version?.ToString(3) ?? "?";
+
 	private void Die(string what, Exception ex)
 	{
 		try
@@ -33,6 +35,7 @@ public partial class App : Application
 		DispatcherUnhandledException += (object _, DispatcherUnhandledExceptionEventArgs e) =>
 		{
 			Logging.SaveLog("dispatcher", e.Exception);
+			CrashReporter.Write("dispatcher", e.Exception, AppVersion);
 			if (_windowUp)
 			{
 				e.Handled = true;
@@ -47,11 +50,14 @@ public partial class App : Application
 			if (e.ExceptionObject is Exception ex)
 			{
 				Logging.SaveLog("domain", ex);
+				CrashReporter.Write("domain", ex, AppVersion);
+				(MainWindow as MainWindow)?.EmergencyShutdown();
 			}
 		};
 		TaskScheduler.UnobservedTaskException += (object? _, UnobservedTaskExceptionEventArgs e) =>
 		{
 			Logging.SaveLog("task", e.Exception);
+			CrashReporter.Write("task", e.Exception, AppVersion);
 			e.SetObserved();
 		};
 	}
@@ -73,6 +79,20 @@ public partial class App : Application
 
 	protected override void OnStartup(StartupEventArgs e)
 	{
+		// "STXEnterprises.exe --reset-proxy": undo a proxy left behind by a crash, then exit. Also used by the uninstaller.
+		if (MemoryExtensions.Contains(e.Args, "--reset-proxy"))
+		{
+			try
+			{
+				ServiceLib.Handler.SysProxy.SysProxyHandler.Guard.RecoverStale(ServiceLib.Handler.SysProxy.SystemProxyGuard.IsLoopbackProxy);
+			}
+			catch (Exception ex)
+			{
+				Logging.SaveLog("reset-proxy", ex);
+			}
+			Shutdown();
+			return;
+		}
 		try
 		{
 			SQLitePCL.Batteries_V2.Init();
@@ -103,6 +123,9 @@ public partial class App : Application
 			return;
 		}
 		_windowUp = window.IsVisible;
+		// Signing out or shutting down while connected must not leave Windows pointing at a dead local proxy.
+		SessionEnding += (object _, SessionEndingCancelEventArgs _) => window.EmergencyShutdown();
+		Exit += (object _, ExitEventArgs _) => window.EmergencyShutdown();
 		Logging.SaveLog($"startup: window shown={_windowUp} hidden={window.StartHidden}");
 		Task.Run(() =>
 		{

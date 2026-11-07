@@ -40,6 +40,11 @@ public sealed class HostSettings
 
 	public bool TcpFastOpen { get; set; }
 
+	/// <summary>Learn each server's certificate on first connect and refuse impostors afterwards (replaces allowInsecure).</summary>
+	public bool PinServerCertificates { get; set; } = true;
+
+	private static readonly object SaveLock = new object();
+
 	private static string Path0 => Path.Combine(Utils.GetConfigPath(), "stx-settings.json");
 	private static string LegacyPath0 => Path.Combine(Utils.GetConfigPath(), "pxn-settings.json");
 
@@ -64,7 +69,10 @@ public sealed class HostSettings
 	{
 		try
 		{
-			File.WriteAllText(Path0, JsonSerializer.Serialize(this, Json));
+			lock (SaveLock)
+			{
+				AtomicFile.WriteAllText(Path0, JsonSerializer.Serialize(this, Json));
+			}
 		}
 		catch (Exception ex)
 		{

@@ -224,7 +224,7 @@ public static class StxConfigTweaks
 		await _io.WaitAsync();
 		try
 		{
-			await File.WriteAllTextAsync(Utils.GetConfigPath(FileName), JsonUtils.Serialize(new Dictionary<string, StxConfigTweak>(_tweaks)));
+			await AtomicFile.WriteAllTextAsync(Utils.GetConfigPath(FileName), JsonUtils.Serialize(new Dictionary<string, StxConfigTweak>(_tweaks)));
 		}
 		catch (Exception ex)
 		{

@@ -34,6 +34,37 @@ public sealed class TunnelController
 
 	private readonly SemaphoreSlim _gate = new SemaphoreSlim(1, 1);
 
+	// Completed once InitAsync has finished. The web UI can call in before the cores are initialised; those calls wait here
+	// instead of hitting a null config.
+	private readonly TaskCompletionSource _ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+	// Cancels a Connect that is still in progress (so Disconnect does not have to wait out 25 s of health checks).
+	private CancellationTokenSource? _connectCts;
+
+	// Cancels automatic reconnect attempts when the user disconnects or quits.
+	private CancellationTokenSource? _recoverCts;
+
+	private long _monitorSampleTick;
+
+	private static readonly TimeSpan[] RecoverBackoff = { TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(6), TimeSpan.FromSeconds(15) };
+
+	/// <summary>Asked when a pinned server presents a different certificate. Returns true if the user accepts the new one.</summary>
+	public Func<string, Task<bool>>? ConfirmCertificateChange { get; set; }
+
+	private static string InstallDir => AppContext.BaseDirectory;
+
+	private async Task EnsureReadyAsync()
+	{
+		try
+		{
+			await _ready.Task.WaitAsync(TimeSpan.FromSeconds(45));
+		}
+		catch (TimeoutException)
+		{
+			throw new TimeoutException("STX is still starting up. Try again in a moment.");
+		}
+	}
+
 	private Config _config;
 
 	private TunnelState _state;
@@ -109,7 +140,9 @@ public sealed class TunnelController
 	{
 		if (!AppManager.Instance.InitApp())
 		{
-			return "STX Enterprises couldn't read its settings. Reinstall to fix it.";
+			string initProblem = "STX Enterprises couldn't read its settings. Reinstall to fix it.";
+			_ready.TrySetException(new InvalidOperationException(initProblem));
+			return initProblem;
 		}
 		AppManager.Instance.InitComponents();
 		_config = AppManager.Instance.Config;
@@ -136,19 +169,26 @@ public sealed class TunnelController
 		}
 		await StxRoutingRepair.ApplyAsync(_config);
 		await ConfigHandler.SaveConfig(_config);
+		// A crash or kill while connected leaves Windows pointing at a proxy port nobody listens on. Undo that first.
+		if (SysProxyHandler.RecoverStaleProxy(SocksPort))
+		{
+			Logging.SaveLog("startup: restored the system proxy left behind by an earlier session");
+		}
 		KillStrayCores();
 		await CoreManager.Instance.Init(_config, OnCoreMessage);
 		await StatisticsManager.Instance.Init(_config, OnStatistics);
 		Initialised = true;
+		_ready.TrySetResult();
 		Publish();
 		return null;
 	}
 
-	private static async Task<bool> ProxyAnsweringAsync(int port, TimeSpan within)
+	private static async Task<bool> ProxyAnsweringAsync(int port, TimeSpan within, CancellationToken ct = default)
 	{
 		DateTime deadline = DateTime.UtcNow + within;
 		while (DateTime.UtcNow < deadline)
 		{
+			ct.ThrowIfCancellationRequested();
 			try
 			{
 				using TcpClient probe = new TcpClient();
@@ -162,16 +202,17 @@ public sealed class TunnelController
 			catch
 			{
 			}
-			await Task.Delay(250);
+			await Task.Delay(250, ct);
 		}
 		return false;
 	}
 
-	private static async Task<bool> NamesResolvingAsync(int port, TimeSpan within)
+	private static async Task<bool> NamesResolvingAsync(int port, TimeSpan within, CancellationToken ct = default)
 	{
-		List<Task<bool>> probes = new string[3] { "one.one.one.one", "www.cloudflare.com", "www.google.com" }.Select((string host) => SocksReachesAsync(port, host, 443, within)).ToList();
+		List<Task<bool>> probes = new string[3] { "one.one.one.one", "www.cloudflare.com", "www.google.com" }.Select((string host) => SocksReachesAsync(port, host, 443, within, ct)).ToList();
 		while (probes.Count > 0)
 		{
+			ct.ThrowIfCancellationRequested();
 			Task<bool> task = await Task.WhenAny(probes);
 			if (task.Result)
 			{
@@ -182,14 +223,15 @@ public sealed class TunnelController
 		return false;
 	}
 
-	private static async Task<bool> SocksReachesAsync(int port, string host, int hostPort, TimeSpan within)
+	private static async Task<bool> SocksReachesAsync(int port, string host, int hostPort, TimeSpan within, CancellationToken outer = default)
 	{
 		_ = 7;
 		checked
 		{
 			try
 			{
-				using CancellationTokenSource cts = new CancellationTokenSource(within);
+				using CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(outer);
+				cts.CancelAfter(within);
 				using TcpClient client = new TcpClient();
 				await client.ConnectAsync(IPAddress.Loopback, port, cts.Token);
 				NetworkStream stream = client.GetStream();
@@ -252,94 +294,14 @@ public sealed class TunnelController
 
 	private static bool CoreRunning(string name)
 	{
-		string value = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
-		Process[] processesByName = Process.GetProcessesByName(name);
-		foreach (Process process in processesByName)
-		{
-			try
-			{
-				string text = process.MainModule?.FileName;
-				if (text != null && text.StartsWith(value, StringComparison.OrdinalIgnoreCase) && !process.HasExited)
-				{
-					return true;
-				}
-			}
-			catch
-			{
-			}
-			finally
-			{
-				process.Dispose();
-			}
-		}
-		return false;
+		return CoreProcesses.AnyRunning(name, InstallDir);
 	}
 
 	private static void KillStrayCores()
 	{
-		string value = AppContext.BaseDirectory.TrimEnd(Path.DirectorySeparatorChar);
-		string[] array = new string[2] { "xray", "sing-box" };
-		foreach (string text in array)
-		{
-			Process[] processesByName = Process.GetProcessesByName(text);
-			foreach (Process process in processesByName)
-			{
-				try
-				{
-					bool shouldKill = false;
-					try
-					{
-						string? text2 = process.MainModule?.FileName;
-						if (text2 != null && text2.StartsWith(value, StringComparison.OrdinalIgnoreCase))
-						{
-							shouldKill = true;
-						}
-					}
-					catch
-					{
-						// If access is denied querying MainModule, it's an elevated orphan from our client
-						shouldKill = true;
-					}
-
-					if (shouldKill && !process.HasExited)
-					{
-						process.Kill(entireProcessTree: true);
-						process.WaitForExit(3000);
-						Logging.SaveLog($"Killed a stray {text} left by a previous session (pid {process.Id}).");
-					}
-				}
-				catch (Exception ex)
-				{
-					Logging.SaveLog("stray " + text + ": " + ex.Message);
-				}
-				finally
-				{
-					process.Dispose();
-				}
-			}
-		}
-
-		if (Utils.IsWindows())
-		{
-			try
-			{
-				Process[] remaining = Process.GetProcessesByName("xray").Concat(Process.GetProcessesByName("sing-box")).ToArray();
-				if (remaining.Length > 0)
-				{
-					using Process pk = Process.Start(new ProcessStartInfo
-					{
-						FileName = "taskkill.exe",
-						Arguments = "/F /T /IM xray.exe /IM sing-box.exe",
-						CreateNoWindow = true,
-						UseShellExecute = false
-					})!;
-					pk?.WaitForExit(2000);
-				}
-			}
-			catch
-			{
-			}
-		}
+		// Only processes whose executable is inside this install are touched. The previous version fell back to
+		// "taskkill /IM xray.exe /IM sing-box.exe", which also killed the cores of any other VPN client on the PC.
+		CoreProcesses.KillOurs(new[] { "xray", "sing-box" }, InstallDir, (string m) => Logging.SaveLog("stray cores: " + m));
 	}
 
 	private Task OnCoreMessage(bool notify, string msg)
@@ -358,6 +320,12 @@ public sealed class TunnelController
 
 	private Task OnStatistics(ServerSpeedItem item)
 	{
+		// The traffic monitor already feeds the same counters; when it produced a sample in the last 3 s, ignore this
+		// source, otherwise every byte is counted twice and the speed display flickers between two values.
+		if (Environment.TickCount64 - Interlocked.Read(ref _monitorSampleTick) < 3000)
+		{
+			return Task.CompletedTask;
+		}
 		checked
 		{
 			long num = item.ProxyUp * 1024;
@@ -376,6 +344,7 @@ public sealed class TunnelController
 
 	public async Task<List<ConfigSummary>> ListConfigsAsync()
 	{
+		await EnsureReadyAsync();
 		List<ProfileItem> source = (await AppManager.Instance.ProfileItems("")) ?? new List<ProfileItem>();
 		string defaultId = _config.IndexId;
 		return (from t in source
@@ -385,12 +354,14 @@ public sealed class TunnelController
 
 	public async Task<string?> ExportConfigAsync(string indexId)
 	{
+		await EnsureReadyAsync();
 		ProfileItem profileItem = await AppManager.Instance.GetProfileItem(indexId);
 		return (profileItem == null) ? null : FmtHandler.GetShareUri(profileItem);
 	}
 
 	public async Task<int> SyncConfigsAsync(IReadOnlyList<IncomingConfig> incoming)
 	{
+		await EnsureReadyAsync();
 		List<ProfileItem> source = (await AppManager.Instance.ProfileItems("")) ?? new List<ProfileItem>();
 		Dictionary<string, ProfileItem> byUuid = source.Where((ProfileItem t) => t.Password.IsNotEmpty()).GroupBy((ProfileItem t) => t.Password, StringComparer.OrdinalIgnoreCase).ToDictionary((IGrouping<string, ProfileItem> g) => g.Key, (IGrouping<string, ProfileItem> g) => g.First(), StringComparer.OrdinalIgnoreCase);
 		int synced = 0;
@@ -421,6 +392,11 @@ public sealed class TunnelController
 					{
 						profileItem.IndexId = value2.IndexId;
 						profileItem.Subid = value2.Subid;
+						// A refreshed link usually carries no pin; keep the one we learned as long as it is still the same server.
+						if (profileItem.CertSha.IsNullOrEmpty() && value2.CertSha.IsNotEmpty() && string.Equals(profileItem.Address, value2.Address, StringComparison.OrdinalIgnoreCase) && profileItem.Port == value2.Port)
+						{
+							profileItem.CertSha = value2.CertSha;
+						}
 						StxConfigTweaks.Apply(profileItem);
 						await ConfigHandler.AddServerCommon(_config, profileItem);
 					}
@@ -474,6 +450,7 @@ public sealed class TunnelController
 
 	public async Task<string?> ImportLinkAsync(string text)
 	{
+		await EnsureReadyAsync();
 		ProfileItem profileItem = FmtHandler.ResolveConfig(text.Trim(), out string msg);
 		if (profileItem == null)
 		{
@@ -485,6 +462,7 @@ public sealed class TunnelController
 
 	public async Task<string?> RemoveConfigAsync(string indexId)
 	{
+		await EnsureReadyAsync();
 		ProfileItem item = await AppManager.Instance.GetProfileItem(indexId);
 		if (item == null)
 		{
@@ -500,6 +478,7 @@ public sealed class TunnelController
 
 	public async Task<ConfigDetail?> ConfigDetailAsync(string indexId)
 	{
+		await EnsureReadyAsync();
 		ProfileItem profileItem = await AppManager.Instance.GetProfileItem(indexId);
 		if (profileItem == null)
 		{
@@ -511,6 +490,7 @@ public sealed class TunnelController
 
 	public async Task<string?> SetConfigDetailAsync(string indexId, StxConfigFields patch, bool reset)
 	{
+		await EnsureReadyAsync();
 		ProfileItem profile = await AppManager.Instance.GetProfileItem(indexId);
 		if (profile == null)
 		{
@@ -590,6 +570,7 @@ public sealed class TunnelController
 
 	public async Task<int> PingAsync(string indexId)
 	{
+		await EnsureReadyAsync();
 		ProfileItem profile = await AppManager.Instance.GetProfileItem(indexId);
 		if (profile == null || profile.Address.IsNullOrEmpty() || profile.Port <= 0)
 		{
@@ -778,13 +759,7 @@ public sealed class TunnelController
 			{
 				freed += Sweep(text, text == Utils.GetLogPath());
 			}
-			string path = Path.Combine(
-				Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-				"StxV2rayClient",
-				"WebView2",
-				"EBWebView",
-				"Default"
-			);
+			string path = Path.Combine(HostPaths.WebViewUserData, "EBWebView", "Default");
 			array = new string[5] { "Cache", "Code Cache", "GPUCache", "DawnGraphiteCache", "DawnWebGPUCache" };
 			foreach (string path2 in array)
 			{
@@ -837,14 +812,49 @@ public sealed class TunnelController
 		return num;
 	}
 
-	public async Task<string?> ConnectAsync(string indexId)
+	public Task<string?> ConnectAsync(string indexId)
 	{
+		return ConnectUserAsync(indexId);
+	}
+
+	private async Task<string?> ConnectUserAsync(string indexId)
+	{
+		CancelRecovery();
+		return await ConnectGatedAsync(indexId, reconnect: false);
+	}
+
+	/// <summary>Takes the gate and connects. With <paramref name="reconnect"/> the current tunnel is torn down inside the same lock hold.</summary>
+	private async Task<string?> ConnectGatedAsync(string indexId, bool reconnect)
+	{
+		await EnsureReadyAsync();
 		CoreAssets.CoreCheck coreCheck = await CoreAssets.VerifyXrayAsync();
 		if (!coreCheck.Ok)
 		{
 			return coreCheck.Problem;
 		}
 		await _gate.WaitAsync();
+		using CancellationTokenSource cts = new CancellationTokenSource();
+		_connectCts = cts;
+		try
+		{
+			if (reconnect)
+			{
+				await DisconnectCoreAsync();
+			}
+			return await ConnectCoreAsync(indexId, cts.Token);
+		}
+		finally
+		{
+			if (ReferenceEquals(_connectCts, cts))
+			{
+				_connectCts = null;
+			}
+			_gate.Release();
+		}
+	}
+
+	private async Task<string?> ConnectCoreAsync(string indexId, CancellationToken ct)
+	{
 		try
 		{
 			ProfileItem profile = await AppManager.Instance.GetProfileItem(indexId);
@@ -855,55 +865,44 @@ public sealed class TunnelController
 			SetState(TunnelState.Connecting, indexId, profile.Remarks, null);
 			await ConfigHandler.SetDefaultServerIndex(_config, indexId);
 			KillStrayCores();
+			ct.ThrowIfCancellationRequested();
 			bool wantTun = _config.TunModeItem.EnableTun;
 			Logging.SaveLog($"connect: {profile.Remarks} | tun={wantTun} | legacyProtect={_config.TunModeItem.EnableLegacyProtect}");
 			await StxServerAddress.PinAsync(profile.Address);
 			UplinkChoice uplink = await StxUplink.ChooseAsync(profile.Address, profile.Port, profile.Sni);
 			StxServerAddress.SetDirectProbe(Utils.IsIpAddress(profile.Address) ? profile.Address : StxServerAddress.Get(profile.Address), profile.Port);
-			CoreConfigContextBuilderAllResult coreConfigContextBuilderAllResult = await CoreConfigContextBuilder.BuildAll(_config, profile);
-			if (!coreConfigContextBuilderAllResult.Success)
+			ct.ThrowIfCancellationRequested();
+
+			bool pinnedNow = await LearnServerPinAsync(profile, uplink);
+			StartOutcome outcome = await StartCoresAsync(profile, uplink, ct);
+			if (outcome.Error != null && pinnedNow)
 			{
-				string text = coreConfigContextBuilderAllResult.CombinedValidatorResult.Errors.FirstOrDefault() ?? "This config could not be prepared.";
-				Logging.SaveLog("connect: build failed — " + text);
-				SetState(TunnelState.Disconnected, null, null, text);
-				return text;
+				// The pin we just learned may itself be the problem (e.g. the server hands out different certificates).
+				// Fall back once to the old behaviour rather than leave the customer without a connection.
+				Logging.SaveLog("connect: failed right after learning the server certificate; retrying once without the pin");
+				await ClearPinAsync(profile);
+				outcome = await StartCoresAsync(profile, uplink, ct);
 			}
-			Logging.SaveLog($"connect: preCore={coreConfigContextBuilderAllResult.PreSocksResult?.Context.RunCoreType.ToString() ?? "none"} mainCore={coreConfigContextBuilderAllResult.MainResult.Context.RunCoreType} mainTun={coreConfigContextBuilderAllResult.MainResult.Context.IsTunEnabled}");
-			await CoreManager.Instance.LoadCore(coreConfigContextBuilderAllResult.MainResult.Context, coreConfigContextBuilderAllResult.PreSocksResult?.Context);
-			bool xrayUp = CoreRunning("xray");
-			bool singBoxUp = CoreRunning("sing-box");
-			Logging.SaveLog($"connect: after load — xray={xrayUp} singBox={singBoxUp}");
-			bool flag = await ProxyAnsweringAsync(SocksPort, TimeSpan.FromSeconds(8L));
-			Logging.SaveLog($"connect: socks {SocksPort} answering={flag}");
-			if (!flag)
+			else if (outcome.Error != null && profile.CertSha.IsNotEmpty())
 			{
-				await CoreManager.Instance.CoreStop();
-				KillStrayCores();
-				string text2 = "The VPN core started but isn't accepting connections. " + (LastCoreError() ?? "Check the log under Settings.");
-				Logging.SaveLog("connect: " + text2 + " — tore the tunnel down rather than black-hole the machine");
-				SetState(TunnelState.Disconnected, null, null, text2);
-				return text2;
+				string? changed = await ExplainCertificateChangeAsync(profile, uplink);
+				if (changed == "retry")
+				{
+					outcome = await StartCoresAsync(profile, uplink, ct);
+				}
+				else if (changed != null)
+				{
+					outcome = outcome with { Error = changed };
+				}
 			}
-			bool flag2 = await NamesResolvingAsync(SocksPort, TimeSpan.FromSeconds(15L));
-			Logging.SaveLog($"connect: names resolving through the proxy={flag2}");
-			if (!flag2)
+			if (outcome.Error != null)
 			{
-				await CoreManager.Instance.CoreStop();
-				KillStrayCores();
-				string text3 = "Connected to the server, but nothing on this computer could look up a web address through it. Left on, that would take your internet away rather than protect it. Try another config, or Clear cache in Settings.";
-				Logging.SaveLog("connect: " + text3);
-				SetState(TunnelState.Disconnected, null, null, text3);
-				return text3;
+				SetState(TunnelState.Disconnected, null, null, outcome.Error);
+				return outcome.Error;
 			}
-			if (!xrayUp && !singBoxUp)
-			{
-				string text4 = "The VPN core wouldn't start. " + (LastCoreError() ?? "Check the log under Settings.");
-				Logging.SaveLog("connect: " + text4);
-				SetState(TunnelState.Disconnected, null, null, text4);
-				return text4;
-			}
+
 			bool fellBack = false;
-			if (wantTun && !singBoxUp)
+			if (wantTun && !outcome.SingBoxUp)
 			{
 				Logging.SaveLog("connect: sing-box did not start; falling back to system proxy");
 				_config.TunModeItem.EnableTun = false;
@@ -916,6 +915,7 @@ public sealed class TunnelController
 				await SysProxyHandler.UpdateSysProxy(_config, forceDisable: false);
 				Logging.SaveLog($"connect: system proxy set to 127.0.0.1:{HttpPort}");
 			}
+			ct.ThrowIfCancellationRequested();
 			_sessionUp = 0L;
 			_sessionDown = 0L;
 			SetState(TunnelState.Connected, indexId, profile.Remarks, null);
@@ -929,11 +929,167 @@ public sealed class TunnelController
 			}
 			return null;
 		}
+		catch (OperationCanceledException)
+		{
+			Logging.SaveLog("connect: cancelled");
+			await TearDownAfterFailureAsync();
+			SetState(TunnelState.Disconnected, null, null, null);
+			return null;
+		}
 		catch (Exception ex)
 		{
 			Logging.SaveLog("connect", ex);
+			await TearDownAfterFailureAsync();
 			SetState(TunnelState.Disconnected, null, null, ex.Message);
 			return ex.Message;
+		}
+	}
+
+	private sealed record StartOutcome(string? Error, bool XrayUp, bool SingBoxUp);
+
+	/// <summary>Builds the config, starts the cores and proves the tunnel carries traffic. On failure the cores are stopped again.</summary>
+	private async Task<StartOutcome> StartCoresAsync(ProfileItem profile, UplinkChoice? uplink, CancellationToken ct)
+	{
+		CoreConfigContextBuilderAllResult built = await CoreConfigContextBuilder.BuildAll(_config, profile);
+		if (!built.Success)
+		{
+			string text = built.CombinedValidatorResult.Errors.FirstOrDefault() ?? "This config could not be prepared.";
+			Logging.SaveLog("connect: build failed — " + text);
+			return new StartOutcome(text, false, false);
+		}
+		Logging.SaveLog($"connect: preCore={built.PreSocksResult?.Context.RunCoreType.ToString() ?? "none"} mainCore={built.MainResult.Context.RunCoreType} mainTun={built.MainResult.Context.IsTunEnabled}");
+		await CoreManager.Instance.LoadCore(built.MainResult.Context, built.PreSocksResult?.Context);
+		ct.ThrowIfCancellationRequested();
+		bool answering = await ProxyAnsweringAsync(SocksPort, TimeSpan.FromSeconds(8L), ct);
+		bool xrayUp = CoreRunning("xray");
+		bool singBoxUp = CoreRunning("sing-box");
+		Logging.SaveLog($"connect: after load — xray={xrayUp} singBox={singBoxUp}");
+		Logging.SaveLog($"connect: socks {SocksPort} answering={answering}");
+		if (!xrayUp && !singBoxUp)
+		{
+			string text = "The VPN core wouldn't start. " + (LastCoreError() ?? "Check the log under Settings.");
+			Logging.SaveLog("connect: " + text);
+			await CoreManager.Instance.CoreStop();
+			KillStrayCores();
+			return new StartOutcome(text, false, false);
+		}
+		if (!answering)
+		{
+			await CoreManager.Instance.CoreStop();
+			KillStrayCores();
+			string text = "The VPN core started but isn't accepting connections. " + (LastCoreError() ?? "Check the log under Settings.");
+			Logging.SaveLog("connect: " + text + " — tore the tunnel down rather than black-hole the machine");
+			return new StartOutcome(text, xrayUp, singBoxUp);
+		}
+		bool resolving = await NamesResolvingAsync(SocksPort, TimeSpan.FromSeconds(15L), ct);
+		Logging.SaveLog($"connect: names resolving through the proxy={resolving}");
+		if (!resolving)
+		{
+			await CoreManager.Instance.CoreStop();
+			KillStrayCores();
+			string text = "Connected to the server, but nothing on this computer could look up a web address through it. Left on, that would take your internet away rather than protect it. Try another config, or Clear cache in Settings.";
+			Logging.SaveLog("connect: " + text);
+			return new StartOutcome(text, xrayUp, singBoxUp);
+		}
+		return new StartOutcome(null, xrayUp, singBoxUp);
+	}
+
+	private static bool IsTlsWithoutCertCheck(ProfileItem p)
+	{
+		return StxCertPin.Decide(p.StreamSecurity, p.AllowInsecure, p.CertSha, p.Cert, StxInsecureDefault.Enabled) == StxCertPin.Need.LearnPin;
+	}
+
+	private static IPAddress? UplinkAddress(UplinkChoice? uplink)
+	{
+		return (uplink != null && IPAddress.TryParse(uplink.Address, out IPAddress? a)) ? a : null;
+	}
+
+	/// <summary>Trust-on-first-use: remembers the server's certificate so later connections reject impostors. Returns true if a pin was added now.</summary>
+	private async Task<bool> LearnServerPinAsync(ProfileItem profile, UplinkChoice? uplink)
+	{
+		if (!StxCertPin.Enabled || !IsTlsWithoutCertCheck(profile))
+		{
+			return false;
+		}
+		IPAddress? target = await ResolveForProbeAsync(profile.Address);
+		if (target == null)
+		{
+			return false;
+		}
+		string sni = !string.IsNullOrEmpty(profile.Sni) ? profile.Sni : (!string.IsNullOrEmpty(profile.RequestHost) ? profile.RequestHost : profile.Address);
+		string? hash = await StxCertPin.FetchLeafSha256Async(target, profile.Port, sni, UplinkAddress(uplink), TimeSpan.FromSeconds(5));
+		if (hash == null)
+		{
+			Logging.SaveLog("certpin: could not learn the server certificate; this connection keeps the old behaviour");
+			return false;
+		}
+		profile.CertSha = hash;
+		await ConfigHandler.AddServerCommon(_config, profile);
+		Logging.SaveLog("certpin: pinned the server certificate for " + profile.Remarks);
+		return true;
+	}
+
+	private async Task ClearPinAsync(ProfileItem profile)
+	{
+		profile.CertSha = string.Empty;
+		await ConfigHandler.AddServerCommon(_config, profile);
+	}
+
+	/// <summary>A pinned server failed. If its certificate really changed, tell the user (and let them accept it) instead of failing silently.</summary>
+	private async Task<string?> ExplainCertificateChangeAsync(ProfileItem profile, UplinkChoice? uplink)
+	{
+		IPAddress? target = await ResolveForProbeAsync(profile.Address);
+		if (target == null)
+		{
+			return null;
+		}
+		string sni = !string.IsNullOrEmpty(profile.Sni) ? profile.Sni : profile.Address;
+		string? now = await StxCertPin.FetchLeafSha256Async(target, profile.Port, sni, UplinkAddress(uplink), TimeSpan.FromSeconds(5));
+		if (now == null || StxCertPin.SameHash(now, profile.CertSha))
+		{
+			return null;
+		}
+		Logging.SaveLog("certpin: the server certificate no longer matches the saved one");
+		Func<string, Task<bool>>? ask = ConfirmCertificateChange;
+		if (ask != null && await ask(profile.Remarks ?? profile.Address))
+		{
+			profile.CertSha = now;
+			await ConfigHandler.AddServerCommon(_config, profile);
+			return "retry";
+		}
+		return "This server's security certificate has changed since you first connected. If you did not expect that, someone may be intercepting the connection, so STX did not connect. If the server was renewed, sync your configs or reset this config in its details, then connect again.";
+	}
+
+	private async Task TearDownAfterFailureAsync()
+	{
+		try
+		{
+			_config.SystemProxyItem.SysProxyType = ESysProxyType.ForcedClear;
+			await SysProxyHandler.UpdateSysProxy(_config, forceDisable: true);
+		}
+		catch (Exception ex)
+		{
+			Logging.SaveLog("teardown: clear system proxy", ex);
+		}
+		try
+		{
+			await CoreManager.Instance.CoreStop();
+		}
+		catch (Exception ex)
+		{
+			Logging.SaveLog("teardown: stop cores", ex);
+		}
+		KillStrayCores();
+	}
+
+	public async Task DisconnectAsync()
+	{
+		CancelRecovery();
+		Interlocked.Exchange(ref _connectCts, null)?.Cancel();
+		await _gate.WaitAsync();
+		try
+		{
+			await DisconnectCoreAsync();
 		}
 		finally
 		{
@@ -941,27 +1097,48 @@ public sealed class TunnelController
 		}
 	}
 
-	public async Task DisconnectAsync()
+	private async Task DisconnectCoreAsync()
 	{
-		await _gate.WaitAsync();
+		_config.SystemProxyItem.SysProxyType = ESysProxyType.ForcedClear;
 		try
 		{
-			_config.SystemProxyItem.SysProxyType = ESysProxyType.ForcedClear;
-			try
-			{
-				await SysProxyHandler.UpdateSysProxy(_config, forceDisable: true);
-			}
-			catch (Exception ex)
-			{
-				Logging.SaveLog("clear system proxy", ex);
-			}
-			await CoreManager.Instance.CoreStop();
-			_upSpeed = (_downSpeed = 0L);
-			SetState(TunnelState.Disconnected, null, null, null);
+			await SysProxyHandler.UpdateSysProxy(_config, forceDisable: true);
 		}
-		finally
+		catch (Exception ex)
 		{
-			_gate.Release();
+			Logging.SaveLog("clear system proxy", ex);
+		}
+		await CoreManager.Instance.CoreStop();
+		_upSpeed = (_downSpeed = 0L);
+		SetState(TunnelState.Disconnected, null, null, null);
+	}
+
+	/// <summary>Synchronous best-effort cleanup for app exit / Windows sign-out: proxy restored, cores stopped.</summary>
+	public void EmergencyCleanup()
+	{
+		try
+		{
+			CancelRecovery();
+			StopWatchdog();
+			Task.Run(async () =>
+			{
+				await TearDownAfterFailureAsync();
+			}).Wait(TimeSpan.FromSeconds(5));
+		}
+		catch (Exception ex)
+		{
+			Logging.SaveLog("emergency cleanup", ex);
+		}
+	}
+
+	private void CancelRecovery()
+	{
+		try
+		{
+			Interlocked.Exchange(ref _recoverCts, null)?.Cancel();
+		}
+		catch (ObjectDisposedException)
+		{
 		}
 	}
 
@@ -990,24 +1167,18 @@ public sealed class TunnelController
 		{
 			return "Per-app routing needs whole-PC coverage, which is off. Turn it on to use this.";
 		}
-		if (_state == TunnelState.Connected && _activeId != null)
-		{
-			string id = _activeId;
-			await DisconnectAsync();
-			return await ConnectAsync(id);
-		}
-		return null;
+		return await ReconnectAsync();
 	}
 
+	/// <summary>Rebuilds the tunnel for the active config. Does nothing unless currently connected.</summary>
 	public async Task<string?> ReconnectAsync()
 	{
-		string id = _activeId;
+		string? id = _activeId;
 		if (_state != TunnelState.Connected || id == null)
 		{
 			return null;
 		}
-		await DisconnectAsync();
-		return await ConnectAsync(id);
+		return await ConnectGatedAsync(id, reconnect: true);
 	}
 
 	public async Task<string?> SetModeAsync(string mode)
@@ -1021,12 +1192,54 @@ public sealed class TunnelController
 		await ConfigHandler.SaveConfig(_config);
 		if (_state == TunnelState.Connected && _activeId != null)
 		{
-			string id = _activeId;
-			await DisconnectAsync();
-			return await ConnectAsync(id);
+			return await ReconnectAsync();
 		}
 		Publish();
 		return null;
+	}
+
+	/// <summary>
+	/// Automatic recovery after the watchdog declared the tunnel dead: up to three attempts with growing pauses,
+	/// each reported to the user. Stops at once if the user disconnects.
+	/// </summary>
+	private async Task RecoverAsync(string id)
+	{
+		CancellationTokenSource cts = new CancellationTokenSource();
+		Interlocked.Exchange(ref _recoverCts, cts)?.Cancel();
+		string? lastError = null;
+		try
+		{
+			for (int attempt = 1; attempt <= RecoverBackoff.Length; attempt++)
+			{
+				cts.Token.ThrowIfCancellationRequested();
+				Notice?.Invoke($"The connection dropped. Reconnecting… (attempt {attempt} of {RecoverBackoff.Length})");
+				Logging.SaveLog($"watchdog: rebuilding the tunnel (attempt {attempt})");
+				lastError = await ConnectGatedAsync(id, reconnect: true);
+				if (lastError == null && _state == TunnelState.Connected)
+				{
+					Notice?.Invoke("Reconnected.");
+					return;
+				}
+				cts.Token.ThrowIfCancellationRequested();
+				await Task.Delay(RecoverBackoff[attempt - 1], cts.Token);
+			}
+			Logging.SaveLog("watchdog: gave up reconnecting");
+			Notice?.Invoke("Couldn't reconnect" + (lastError != null ? ": " + lastError : ".") + " The VPN is off so this PC keeps its internet. Connect again, or pick another server.");
+			SetState(TunnelState.Disconnected, null, null, lastError);
+		}
+		catch (OperationCanceledException)
+		{
+			Logging.SaveLog("watchdog: reconnect cancelled by the user");
+		}
+		catch (Exception ex)
+		{
+			Logging.SaveLog("watchdog: recover", ex);
+		}
+		finally
+		{
+			Interlocked.CompareExchange(ref _recoverCts, null, cts);
+			cts.Dispose();
+		}
 	}
 
 	public TunnelStatus Snapshot()
@@ -1268,6 +1481,7 @@ public sealed class TunnelController
 						_downSpeed = deltaDown;
 						_sessionUp += deltaUp;
 						_sessionDown += deltaDown;
+						Interlocked.Exchange(ref _monitorSampleTick, Environment.TickCount64);
 
 						Publish();
 					}
@@ -1355,24 +1569,20 @@ public sealed class TunnelController
 						continue;
 					}
 					failures++;
-					Logging.SaveLog($"watchdog: the tunnel did not answer ({failures}/{3})");
-					if (failures < 3 || token.IsCancellationRequested)
+					int needed = flag ? 2 : 3;
+					Logging.SaveLog($"watchdog: the tunnel did not answer ({failures}/{needed})");
+					if (failures < needed || token.IsCancellationRequested)
 					{
+						if (flag)
+						{
+							wait = TimeSpan.FromSeconds(3L);
+						}
 						continue;
 					}
-					if (!token.IsCancellationRequested && _state == TunnelState.Connected)
+					if (!token.IsCancellationRequested && _state == TunnelState.Connected && _activeId != null)
 					{
-						if (repairs < 1)
-						{
-							_ = repairs + 1;
-							Logging.SaveLog("watchdog: rebuilding the tunnel");
-							Notice?.Invoke("The connection dropped. Reconnecting…");
-							await ReconnectAsync();
-						}
-						else
-						{
-							await GiveUpAsync();
-						}
+						string recoverId = _activeId;
+						_ = Task.Run(() => RecoverAsync(recoverId));
 					}
 					break;
 				}
